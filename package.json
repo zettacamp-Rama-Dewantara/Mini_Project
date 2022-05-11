@@ -1,0 +1,35 @@
+{
+  "dependencies": {
+    "apollo-cache-inmemory": "^1.6.6",
+    "apollo-client": "^2.6.10",
+    "apollo-link-http": "^1.5.17",
+    "apollo-server-errors": "^3.3.1",
+    "apollo-server-express": "^2.8.1",
+    "bcryptjs": "^2.4.3",
+    "core-js": "^3.22.5",
+    "dataloader": "^1.4.0",
+    "express": "^4.18.0",
+    "graphql": "^15.8.0",
+    "graphql-middleware": "^6.1.25",
+    "graphql-tag": "^2.12.6",
+    "graphql-tools": "^8.2.8",
+    "jsonwebtoken": "^8.5.1",
+    "lodash": "^4.17.21",
+    "mongoose": "^5.6.9",
+    "react-apollo": "^3.1.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  },
+  "name": "mini-project",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js",
+    "start": "nodemon app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
