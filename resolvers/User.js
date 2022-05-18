@@ -28,18 +28,34 @@ const getAllUser = async (parent,{pagination,fillter,sorting},context) => {
         })
     }
 
-    if (pagination && (pagination.page || pagination.page === 0) && pagination.limit) {
-        aggregateQuery.push(
-            // {
-        //   $facet: {
-             { $skip : pagination.page > 0 
-                ? ( ( pagination.page - 1 ) * pagination.limit )
-                : 0 }, { $limit: pagination.limit },
-            // countData: [{ $group: { _id: null, count: { $sum: 1 } } }],
-        //   },
-        // }
-        );
+    if (pagination && (pagination.page || pagination.page === 0) && pagination.limit ) {
+        aggregateQuery.push({
+          $facet: {
+            data: [
+              { $skip: pagination.limit * pagination.page },
+              { $limit: pagination.limit },
+            ],
+            countData: [{ $group: { _id: null, count: { $sum: 1 } } }],
+          },
+        });
+    
+        let users = await User.aggregate(aggregateQuery);
+        const count_document =
+          users[0] && users[0].countData[0] && users[0].countData[0].count
+            ? users[0].countData[0].count
+            : 0;
+        return users[0].data.map((data) => {
+          return { ...data, count_document };
+        });
     }
+
+    // if (pagination && (pagination.page || pagination.page === 0) && pagination.limit) {
+    //     aggregateQuery.push(
+    //          { $skip : pagination.page > 0 
+    //             ? ( ( pagination.page - 1 ) * pagination.limit )
+    //             : 0 }, { $limit: pagination.limit },
+    //     );
+    // }
     const user = await User.aggregate(aggregateQuery)
     return user
 }
@@ -69,19 +85,19 @@ const loginUser = async (parent, {loginInput}) => {
     // user.token = token
     // return user
 
-    return { value: jwt.sign(userForToken, 'SECRET',{ expiresIn: 60*60 }) }
+    return { value: jwt.sign(userForToken, 'SECRET') }
 }
 
-const createUser = async (parent,input_user) => {
+const createUser = async (parent,{input_user}) => {
     const foundEmail = await User.findOne({email : input_user.email})
 
     if(foundEmail) {
         throw new UserInputError('email alredy exisit', {
-            invalidArgs: args.email
+            invalidArgs: input_user.email
         })
     }
 
-    var encrypedPassword = await bcrypt.hash(args.hashed_password, 10)
+    var encrypedPassword = await bcrypt.hash(input_user.hashed_password, 10)
 
     const user = new User({
         name: input_user.name,
@@ -89,17 +105,21 @@ const createUser = async (parent,input_user) => {
         hashed_password: encrypedPassword,
         user_type: input_user.user_type
     })
+    console.log(user.hashed_password)
 
     await user.save()
     return user
 }
 
-const updateUser = async (parent,{input_user: {name,email,hashed_password}},context) => {
+const updateUser = async (parent,{input_user},context) => {
     const currentUser = context.currentUser
+
+    var encrypedPassword = await bcrypt.hash(input_user.hashed_password, 10)
+    
     const user = {
-        name: name,
-        email: email,
-        hashed_password: hashed_password
+        name: input_user.name,
+        email: input_user.email,
+        hashed_password: encrypedPassword
     }
 
     const savedUser = await User.findByIdAndUpdate({_id: currentUser._id},user,{new: true})

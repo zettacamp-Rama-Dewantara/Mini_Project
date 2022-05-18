@@ -7,6 +7,7 @@ const songTypeDef = gql`
         genre: String,
         duration: Int
         created_by: User
+        count_document: Int
     }
 
     input InputSong {

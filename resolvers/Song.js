@@ -1,5 +1,6 @@
 const Song = require('../models/Song')
 const _ = require('lodash')
+const fs = require('fs');
 
 const createSong = async (parent,{input_song},context) => {
     const currentUser = context.currentUser
@@ -30,6 +31,12 @@ const updateSong = async (parent,{input_song,id},context) => {
         throw new AuthenticationError("not authenticated")
     }
 
+    // const songObj = {
+    //     name : input_song.name,
+    //     genre : input_song.genre,
+    //     duration : input_song.duration
+    // }
+
     song.name= input_song.name
     song.genre = input_song.genre
     song.duration = input_song.duration
@@ -37,6 +44,8 @@ const updateSong = async (parent,{input_song,id},context) => {
     if(currentUser._id.toString() === song.created_by.toString()){
         await song.save()
         return song
+        // const savedSong = await Song.findByIdAndUpdate({_id: song._id},songObj,{new:true})
+        // return savedSong
     }
 
     throw new Error('only user created this song can update')
@@ -116,14 +125,27 @@ const getAllSong = async (parent,{pagination,fillter,sorting},context) => {
         })
     }
 
-    if (pagination && (pagination.page || pagination.page === 0) && pagination.limit) {
-        aggregateQuery.push(
-             { $skip : pagination.page > 0 
-                ? ( ( pagination.page - 1 ) * pagination.limit )
-                : 0 }, { $limit: pagination.limit },
-        );
+    if (pagination && (pagination.page || pagination.page === 0) && pagination.limit ) {
+        aggregateQuery.push({
+          $facet: {
+            data: [
+              { $skip: pagination.limit * pagination.page },
+              { $limit: pagination.limit },
+            ],
+            countData: [{ $group: { _id: null, count: { $sum: 1 } } }],
+          },
+        });
+    
+        let song = await Song.aggregate(aggregateQuery).allowDiskUse(true)
+        const count_document =
+          song[0] && song[0].countData[0] && song[0].countData[0].count
+            ? song[0].countData[0].count
+            : 0;
+        return song[0].data.map((data) => {
+          return { ...data, count_document }
+        });
     }
-
+    
     const songs = await Song.aggregate(aggregateQuery)
     return songs
 }
@@ -149,7 +171,7 @@ const removeSong = async (parent,args,context) => {
 
     if(currentUser._id.toString() === song.created_by.toString()) {
         await Song.findByIdAndDelete({_id: args.id})
-        throw new Error('data deleted')
+        return true
     }
     throw new Error('only user create this song can delete')
 }
